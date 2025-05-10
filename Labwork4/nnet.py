@@ -12,6 +12,11 @@ class Node:
         self.ws = Array(random.rand() for _ in range(n_in))
         self.b = random.rand()
 
+    def config_wts(self, wts: list[float]):
+        assert len(wts) == len(self.ws) + 1
+        self.b = wts[0]
+        self.ws = Array(wts[1:])
+
     def __call__(self, x: Array):
         assert isinstance(x, Array)
         return sigmoid(sum(self.ws * x) + self.b)
@@ -40,6 +45,12 @@ class Model:
             n_in = config[i-1]
             n_out = config[i]
             self.layers.append(Layer(n_in, n_out))
+
+    def config_wts(self, model_wts: list[list[float]]):
+        all_nodes: list[Node] = []
+        for layer in self.layers: all_nodes.extend(layer.nodes)
+        assert len(model_wts) == len(all_nodes)
+        for n, wts in zip(all_nodes, model_wts): n.config_wts(wts)
 
     def __call__(self, x: Array):
         for layer in self.layers:

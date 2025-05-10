@@ -22,3 +22,17 @@ print(x)
 
 print(model(x))
 
+#%%
+model = Model([2,2,1])
+model.config_wts(
+    [
+        [1.5, -1, -1],
+        [-0.5, 1, 1],
+        [-1.5, 1, 1],
+    ]
+)
+
+#%%
+x = Array([0,0])
+print(model(x))
+
