@@ -38,9 +38,8 @@ class Node:
     def grad(self, grad: float) -> Array:
         sigmoid_grad = self.a * (1 - self.a)
         self.b_grads.append(grad * sigmoid_grad)
-        ws_grad = grad * sigmoid_grad * self.x
-        self.ws_grads.append(ws_grad)
-        return ws_grad
+        self.ws_grads.append(grad * sigmoid_grad * self.x)
+        return grad * sigmoid_grad * self.ws
 
     def update(self):
         rate = -1/len(self.b_grads)
