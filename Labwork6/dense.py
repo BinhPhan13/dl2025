@@ -21,7 +21,7 @@ class ReLU(Act):
         return self.out
 
     def grad(self):
-        return 1.0 if self.out > 0 else 0.0
+        return float(self.out > 0)
 
 ACT_NAME: dict[str, type[Act]] = {
     'relu': ReLU,
@@ -34,11 +34,11 @@ class Node:
     def __init__(self, n_in: int, act: str):
         self.ws = Array(random.rand() for _ in range(n_in))
         self.b = 0.0
-        self.x = Array([])
+        self.x = Array([0.0])
 
         self.act = ACT_NAME[act]()
-        self.ws_grads = []
-        self.b_grads = []
+        self.ws_grads: list[Array[float]] = []
+        self.b_grads : list[float]= []
 
     def config_wts(self, wts: _Wts):
         assert len(wts) == len(self.ws) + 1
@@ -48,12 +48,12 @@ class Node:
     def __repr__(self):
         return f"{self.b},\n{self.ws}"
 
-    def __call__(self, x: Array):
+    def __call__(self, x: Array[float]):
         self.x = x
         out = self.act(self.ws@x + self.b)
         return out
 
-    def grad(self, grad: float):
+    def grad(self, grad: float) -> Array[float]:
         act_grad = self.act.grad()
         self.b_grads.append(grad * act_grad)
         self.ws_grads.append(grad * act_grad * self.x)
@@ -62,7 +62,7 @@ class Node:
     def update(self):
         rate = -1/len(self.b_grads)
         self.b = self.b + rate * sum(self.b_grads)
-        self.ws = self.ws + rate * sum(self.ws_grads)
+        self.ws: Array[float] = self.ws + rate * sum(self.ws_grads)
         self.b_grads = []
         self.ws_grads = []
 
@@ -84,14 +84,12 @@ class Layer:
             "\n".join(str(n) for n in self.nodes)
         )
 
-    def __call__(self, x: Array):
+    def __call__(self, x: Array[float]):
         return Array(n(x) for n in self.nodes)
 
-    def grad(self, grads: Array):
+    def grad(self, grads: Array[float]):
         assert len(grads) == len(self.nodes)
-        out = sum(n.grad(grad) for n, grad in zip(self.nodes, grads))
-        assert isinstance(out, Array)
-        return out
+        return Array(n.grad(grad) for n, grad in zip(self.nodes, grads)).sum()
 
     def update(self):
         for n in self.nodes: n.update()
@@ -119,12 +117,12 @@ class Model:
     def __repr__(self):
         return "\n".join(str(n) for n in self.layers)
 
-    def __call__(self, x: Array):
+    def __call__(self, x: Array[float]):
         for layer in self.layers:
             x = layer(x)
         return x
 
-    def grad(self, grads: Array):
+    def grad(self, grads: Array[float]):
         for layer in reversed(self.layers):
             grads = layer.grad(grads)
 

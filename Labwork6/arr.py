@@ -1,7 +1,8 @@
-from typing import Any, Iterable, overload
+from typing import Iterable, Sequence, TypeVar, overload
 
-class Array:
-    def __init__(self, data: Iterable[Any]):
+T = TypeVar('T')
+class Array(Sequence[T]):
+    def __init__(self, data: Iterable[T]):
         self._data = list(data)
         self._repr = ", ".join(str(x) for x in self)
 
@@ -15,9 +16,9 @@ class Array:
         return len(self._data)
 
     @overload
-    def __getitem__(self, idx: int) -> Any: ...
+    def __getitem__(self, idx: int) -> T: ...
     @overload
-    def __getitem__(self, idx: slice) -> 'Array': ...
+    def __getitem__(self, idx: slice) -> 'Array[T]': ...
     def __getitem__(self, idx):
         if isinstance(idx, int): return self._data[idx]
         assert isinstance(idx, slice)
@@ -65,6 +66,9 @@ class Array:
     def __neg__(self):
         return 0 - self
 
-    def __matmul__(self, other) -> float:
-        return sum(self.__mul__(other))
+    def __matmul__(self, other):
+        return self.__mul__(other).sum()
+
+    def sum(self) -> T:
+        return sum(x for x in self) # type: ignore
 
