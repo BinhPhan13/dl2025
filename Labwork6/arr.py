@@ -72,3 +72,7 @@ class Array(Sequence[T]):
     def sum(self) -> T:
         return sum(x for x in self) # type: ignore
 
+    @staticmethod
+    def fill(v: T, n: int) -> 'Array[T]':
+        return Array(v for _ in range(n))
+
