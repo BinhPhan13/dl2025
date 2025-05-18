@@ -141,6 +141,15 @@ class Matrix:
     def flip(self):
         return Matrix(reversed(self._data)).on(*self.shape)
 
+    def max(self):
+        max_v = -1e7
+        max_idx = 0
+        for idx, v in enumerate(self):
+            if v < max_v: continue
+            max_v = v
+            max_idx = idx
+        return float(max_v), divmod(max_idx, self.ncol)
+
 
     @property
     def shape(self):

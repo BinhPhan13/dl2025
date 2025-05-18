@@ -3,18 +3,48 @@ from mat import Matrix
 
 class Act:
     def __call__(self, x: Matrix) -> Matrix: ...
-    def grad(self) -> Matrix: ...
+    def grad(self, grad: Matrix) -> Matrix: ...
 
 class ReLU(Act):
     def __call__(self, x: Matrix):
         self.out = Matrix(max(0, d) for d in x).on(*x.shape)
         return self.out
 
-    def grad(self):
-        return Matrix(d > 0 for d in self.out).on(*self.out.shape)
+    def grad(self, grad: Matrix):
+        return grad * Matrix(d > 0 for d in self.out)
+
+class MaxPool(Act):
+    def __init__(self, ksize: int = 2):
+        self.ksize = ksize
+
+    def __call__(self, x: Matrix):
+        assert x.nrow % self.ksize == 0 and x.ncol % self.ksize == 0
+        rs = range(0, x.ncol, self.ksize)
+        cs = range(0, x.nrow, self.ksize)
+
+        max_data: list[float] = []
+        max_rcs: list[tuple[int, int]] = []
+        for r in rs:
+            for c in cs:
+                v, (mr, mc) = x[r : r + self.ksize, c : c + self.ksize].max()
+                max_data.append(v)
+                max_rcs.append((mr + r, mc + c))
+
+        self.shape = x.shape
+        self.indices = max_rcs
+        self.out = Matrix(max_data).on(len(rs), len(cs))
+        return self.out
+
+    def grad(self, grad: Matrix):
+        assert grad.shape == self.out.shape
+        out = Matrix.fill(0, *self.shape)
+        for rc, g in zip(self.indices, grad): out[rc] = g
+        return out
+
 
 ACT_NAME: dict[str, type[Act]] = {
     'relu': ReLU,
+    'maxpool': MaxPool,
 }
 
 class ConvNode:
@@ -36,7 +66,7 @@ class ConvNode:
         return out
 
     def grad(self, grad: Matrix) -> Array[Matrix]:
-        grad = grad * self.act.grad()
+        grad = self.act.grad(grad)
         self.b_grads.append(sum(grad))
         self.ws_grads.append(Array(m.conv(grad) for m in self.x))
 
