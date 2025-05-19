@@ -1,13 +1,13 @@
-from typing import Iterable, Sequence, TypeVar, overload
+from typing import Any, Iterable, Sequence, TypeVar, overload
+from rand import random as rng
 
 T = TypeVar('T')
 class Array(Sequence[T]):
     def __init__(self, data: Iterable[T]):
         self._data = list(data)
-        self._repr = ", ".join(str(x) for x in self)
 
     def __repr__(self):
-        return self._repr
+        return ", ".join(str(x) for x in self)
 
     def __iter__(self):
         return iter(self._data)
@@ -23,6 +23,19 @@ class Array(Sequence[T]):
         if isinstance(idx, int): return self._data[idx]
         assert isinstance(idx, slice)
         return Array(self._data[i] for i in range(*idx.indices(len(self))))
+
+    @overload
+    def __setitem__(self, idx: int, v: Any): ...
+    @overload
+    def __setitem__(self, idx: slice, v: Iterable[Any]): ...
+    def __setitem__(self, idx, v):
+        if isinstance(idx, int):
+            self._data[idx] = v
+            return
+
+        indices = idx.indices(len(self))
+        for i, d in zip(indices, v, strict=True):
+           self._data[i] = d
 
     def _scale(self, other):
         return (other for _ in self)
@@ -74,5 +87,8 @@ class Array(Sequence[T]):
 
     @staticmethod
     def fill(v: T, n: int) -> 'Array[T]':
-        return Array(v for _ in range(n))
+        loop = (v for i in range(n))
+        if v is not None:
+            return Array(loop)
+        return Array(rng.rand() for _ in loop)
 
