@@ -1,5 +1,5 @@
 from typing import Any, Iterable, Sequence, TypeVar, overload
-from rand import random as rng
+from helper import rng
 
 T = TypeVar('T')
 class Array(Sequence[T]):

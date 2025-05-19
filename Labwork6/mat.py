@@ -1,5 +1,5 @@
-from rand import random as rng
 from typing import Any, Iterable, overload
+from helper import rng
 
 class Matrix:
     def __init__(self, data: Iterable[Any]):
