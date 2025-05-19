@@ -32,13 +32,13 @@ class _Node:
         self.ws_grads: list[Array[float]] = []
         self.b_grads : list[float]= []
 
-    def __call__(self, x: Array[float]) -> float:
-        self.x = x
-        return self.ws@x + self.b
+    def __call__(self, xs: Array[float]) -> float:
+        self.xs = xs
+        return self.ws@xs + self.b
 
     def back(self, grad: float) -> Array[float]:
         self.b_grads.append(grad)
-        self.ws_grads.append(grad * self.x)
+        self.ws_grads.append(grad * self.xs)
         return grad * self.ws
 
     def update(self):
@@ -54,8 +54,8 @@ class Layer(Module):
     def __init__(self, n_in: int, n_out: int):
         self.nodes = [_Node(n_in) for _ in range(n_out)]
 
-    def __call__(self, x: Array[float]) -> Array[float]:
-        return Array(node(x) for node in self.nodes)
+    def __call__(self, xs: Array[float]) -> Array[float]:
+        return Array(node(xs) for node in self.nodes)
 
     def back(self, grads: Array[float]) -> Array[float]:
         return Array(

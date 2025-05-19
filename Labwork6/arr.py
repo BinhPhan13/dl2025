@@ -87,8 +87,8 @@ class Array(Sequence[T]):
 
     @staticmethod
     def fill(v: T, n: int) -> 'Array[T]':
-        loop = (v for i in range(n))
-        if v is not None:
-            return Array(loop)
-        return Array(rng.rand() for _ in loop)
+        return Array(v for _ in range(n))
+
+    def rand(self, n) -> 'Array[float]':
+        return Array(rng.rand() for _ in range(n))
 
