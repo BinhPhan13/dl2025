@@ -1,131 +1,86 @@
-from typing import Sequence
 from arr import Array
-from rand import random
-from helper import sigmoid
+from helper import rng, sigmoid
 
-class Act:
-    def __call__(self, x: float) -> float: ...
-    def grad(self) -> float: ...
 
-class Sigmoid(Act):
-    def __call__(self, x: float):
-        self.out = sigmoid(x)
+class Module:
+    def __call__(self, xs: Array[float]) -> Array[float]: ...
+    def back(self, grads: Array[float]) -> Array[float]: ...
+    def update(self): return None
+
+class Sigmoid(Module):
+    def __call__(self, xs: Array[float]) -> Array[float]:
+        self.out = Array(sigmoid(x) for x in xs)
         return self.out
 
-    def grad(self):
-        return self.out * (1 - self.out)
+    def back(self, grads: Array[float]) -> Array[float]:
+        return grads * Array(o*(1-o) for o in self.out)
 
-class ReLU(Act):
-    def __call__(self, x: float):
-        self.out = max(0, x)
+class ReLU(Module):
+    def __call__(self, xs: Array[float]) -> Array[float]:
+        self.out = Array(max(0, x) for x in xs)
         return self.out
 
-    def grad(self):
-        return float(self.out > 0)
-
-ACT_NAME: dict[str, type[Act]] = {
-    'relu': ReLU,
-    'sigmoid': Sigmoid,
-}
+    def back(self, grads: Array[float]) -> Array[float]:
+        return grads * Array(float(o > 0) for o in self.out)
 
 
-_Wts = Sequence[float]
-class Node:
-    def __init__(self, n_in: int, act: str):
-        self.ws = Array(random.rand() for _ in range(n_in))
+class _Node:
+    def __init__(self, n_in: int):
+        self.ws = Array(rng.rand() for _ in range(n_in))
         self.b = 0.0
-        self.x = Array([0.0])
 
-        self.act = ACT_NAME[act]()
         self.ws_grads: list[Array[float]] = []
         self.b_grads : list[float]= []
 
-    def config_wts(self, wts: _Wts):
-        assert len(wts) == len(self.ws) + 1
-        self.b = wts[0]
-        self.ws = Array(wts[i] for i in range(1, len(wts)))
-
-    def __repr__(self):
-        return f"{self.b},\n{self.ws}"
-
-    def __call__(self, x: Array[float]):
+    def __call__(self, x: Array[float]) -> float:
         self.x = x
-        out = self.act(self.ws@x + self.b)
-        return out
+        return self.ws@x + self.b
 
-    def grad(self, grad: float) -> Array[float]:
-        act_grad = self.act.grad()
-        self.b_grads.append(grad * act_grad)
-        self.ws_grads.append(grad * act_grad * self.x)
-        return grad * act_grad * self.ws
+    def back(self, grad: float) -> Array[float]:
+        self.b_grads.append(grad)
+        self.ws_grads.append(grad * self.x)
+        return grad * self.ws
 
     def update(self):
         rate = -1/len(self.b_grads)
         self.b = self.b + rate * sum(self.b_grads)
         self.ws: Array[float] = self.ws + rate * sum(self.ws_grads)
+
         self.b_grads = []
         self.ws_grads = []
 
 
-class Layer:
-    def __init__(self, n_in: int, n_out: int, act: str = 'relu'):
-        self.n_in = n_in
-        self.n_out = n_out
-        self.nodes = [Node(n_in, act) for _ in range(n_out)]
+class Layer(Module):
+    def __init__(self, n_in: int, n_out: int):
+        self.nodes = [_Node(n_in) for _ in range(n_out)]
 
-    def config_wts(self, layer_wts: Sequence[_Wts]):
-        assert len(layer_wts) == len(self.nodes)
-        for n, wts in zip(self.nodes, layer_wts):
-            n.config_wts(wts)
+    def __call__(self, x: Array[float]) -> Array[float]:
+        return Array(node(x) for node in self.nodes)
 
-    def __repr__(self):
-        return (
-            f"Layer({self.n_in}, {self.n_out})\n" +
-            "\n".join(str(n) for n in self.nodes)
-        )
-
-    def __call__(self, x: Array[float]):
-        return Array(n(x) for n in self.nodes)
-
-    def grad(self, grads: Array[float]):
-        assert len(grads) == len(self.nodes)
-        return Array(n.grad(grad) for n, grad in zip(self.nodes, grads)).sum()
+    def back(self, grads: Array[float]) -> Array[float]:
+        return Array(
+            node.back(grad)
+            for node, grad in zip(self.nodes, grads)
+        ).sum()
 
     def update(self):
         for n in self.nodes: n.update()
 
 
-class Model:
-    @staticmethod
-    def config(cfg: list[int], acts: list[str]):
-        assert len(cfg) == len(acts) + 1
-        return Model([
-            Layer(cfg[i - 1], cfg[i], acts[i - 1])
-            for i in range(1, len(cfg))
-        ])
+class Model(Module):
+    def __init__(self, modules: list[Module]):
+        self.modules = modules
 
-    def __init__(self, layers: list[Layer]):
-        self.layers = layers
+    def __call__(self, xs: Array[float]) -> Array[float]:
+        for module in self.modules:
+            xs = module(xs)
+        return xs
 
-    def config_wts(self, model_wts: Sequence[_Wts]):
-        i = 0
-        for layer in self.layers:
-            layer_wts = tuple(model_wts[j] for j in range(i, i+layer.n_out))
-            layer.config_wts(layer_wts)
-            i += layer.n_out
-
-    def __repr__(self):
-        return "\n".join(str(n) for n in self.layers)
-
-    def __call__(self, x: Array[float]):
-        for layer in self.layers:
-            x = layer(x)
-        return x
-
-    def grad(self, grads: Array[float]):
-        for layer in reversed(self.layers):
-            grads = layer.grad(grads)
+    def back(self, grads: Array[float]) -> Array[float]:
+        for module in reversed(self.modules):
+            grads = module.back(grads)
+        return grads
 
     def update(self):
-        for layer in self.layers: layer.update()
+        for module in self.modules: module.update()
 

@@ -1,6 +1,7 @@
-from dense import Model
+import dense
 from arr import Array
-from helper import bce_der
+from helper import rng
+from misc import BCE
 
 # %%
 data = [
@@ -12,27 +13,31 @@ data = [
 labels = [1, 0, 0, 1]
 
 # %%
-model = Model.config([2, 2, 1], ['sigmoid', 'sigmoid'])
-# model.config_wts([
-#     [1.5, -1, -1],
-#     [-0.5, 1, 1],
-#     [-1.5, -1, 1],
-# ])
+rng.seed(7)
+model = dense.Model([
+    dense.Layer(2, 2),
+    dense.Sigmoid(),
+    dense.Layer(2, 1),
+    dense.Sigmoid(),
+])
 
 
 # %%
+loss = BCE()
 def train(lr: float = 0.01):
-    for xs, ytrue in zip(data, labels):
-        ypred = model(xs)[0]
-        grad = lr * bce_der(ytrue, ypred)
-        model.grad(Array([grad]))
+    out = 0.0
+    for xs, label in zip(data, labels):
+        preds = model(xs)
+        out += loss(preds, label)
+        model.back(lr * loss.back())
 
+    print(f"Loss: {out/len(labels):.5f}")
     model.update()
 
 
 # %%
 for i in range(1000):
-    train(1)
+    train(3)
 
 # %%
 for i in range(len(data)):
