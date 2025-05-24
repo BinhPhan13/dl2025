@@ -85,10 +85,19 @@ class Array(Sequence[T]):
     def sum(self) -> T:
         return sum(x for x in self) # type: ignore
 
+    def max(self):
+        max_v, max_i = self[0], 0
+        for i, v in enumerate(self):
+            if i == 0: continue
+            if v > max_v:  # type:ignore
+                max_v, max_i = v, i
+        return max_v, max_i
+
     @staticmethod
     def fill(v: T, n: int) -> 'Array[T]':
         return Array(v for _ in range(n))
 
-    def rand(self, n) -> 'Array[float]':
+    @staticmethod
+    def rand(n: int) -> 'Array[float]':
         return Array(rng.rand() for _ in range(n))
 
