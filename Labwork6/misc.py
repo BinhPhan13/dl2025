@@ -16,18 +16,15 @@ class BCE:
 
 class MCE:
     def __call__(self, preds: Array[float], label: int) -> float:
-        self.N = len(preds)
-        assert label in range(self.N)
+        assert label in range(len(preds))
         self.label = label
-
         preds = Array(exp(p) for p in preds)
-        preds = preds / preds.sum()
-        self.pred = preds[label]
-        return - label * log(self.pred)
+        self.preds: Array[float] = preds / preds.sum()
+        return -log(self.preds[self.label])
 
     def back(self) -> Array[float]:
-        grad = Array.fill(0, self.N)
-        grad[self.label] = -1/self.pred * self.pred*(1-self.pred)
+        grad = Array(self.preds)
+        grad[self.label] = grad[self.label]-1
         return grad
 
 
