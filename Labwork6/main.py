@@ -36,12 +36,14 @@ class Model:
         self.conv_model = conv.Model([
             conv.Layer(1, 2, 3),
             conv.ReLU(),
-            conv.Layer(2, 2, 3),
+            conv.Layer(2, 4, 3),
             conv.ReLU(),
             conv.MaxPool(4),
         ])
         self.flat = Flatten()
         self.dense_model = dense.Model([
+            dense.Layer(64, 32),
+            dense.ReLU(),
             dense.Layer(32, 10),
         ])
 
